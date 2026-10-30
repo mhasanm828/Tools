@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiple Link Opener</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; color: #1a1a1a; padding: 20px 14px 40px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 6px; }
+  p.sub { color: #555; font-size: .95rem; margin-bottom: 18px; }
+  textarea { width: 100%; min-height: 170px; padding: 12px; font-size: 1rem; line-height: 1.5; border: 1px solid #ccc; border-radius: 10px; resize: vertical; background: #fff; }
+  textarea:focus { outline: 2px solid #2563eb; border-color: #2563eb; }
+  .count { margin: 10px 0 14px; font-weight: 600; color: #2563eb; }
+  .btns { display: flex; flex-wrap: wrap; gap: 10px; }
+  button { flex: 1 1 140px; padding: 13px 10px; font-size: 1rem; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; }
+  .open { background: #2563eb; color: #fff; }
+  .open:disabled { background: #9db6e8; cursor: not-allowed; }
+  .ghost { background: #e5e7eb; color: #1a1a1a; }
+  .note { margin-top: 14px; font-size: .85rem; color: #666; line-height: 1.5; }
+  ul.links { list-style: none; margin-top: 18px; }
+  ul.links li { background: #fff; border: 1px solid #e2e2e2; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  ul.links a { color: #2563eb; word-break: break-all; text-decoration: none; font-size: .95rem; }
+  ul.links a:hover { text-decoration: underline; }
+  ul.links button { flex: 0 0 auto; padding: 6px 10px; font-size: .85rem; background: #fee2e2; color: #b91c1c; border-radius: 6px; }
+  .status { margin-top: 12px; font-size: .9rem; color: #15803d; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔗 Multiple Link Opener</h1>
+  <p class="sub">Paste links below, one per line — then open them all at once.</p>
+
+  <textarea id="input" placeholder="https://example.com&#10;https://github.com&#10;google.com"></textarea>
+
+  <div class="count" id="count">0 valid links</div>
+
+  <div class="btns">
+    <button class="open" id="openAll">Open All Links</button>
+    <button class="ghost" id="copyBtn">Copy List</button>
+    <button class="ghost" id="clearBtn">Clear</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <ul class="links" id="list"></ul>
+
+  <p class="note">Tip: browsers may block multiple tabs as pop-ups. If only one tab opens, click "Allow pop-ups" for this page and try again. Links are saved in your browser automatically, so your list is still here when you come back.</p>
+</div>
+
+<script>
+  const input = document.getElementById('input');
+  const list = document.getElementById('list');
+  const countEl = document.getElementById('count');
+  const statusEl = document.getElementById('status');
+  const openBtn = document.getElementById('openAll');
+
+  // Restore saved list
+  input.value = localStorage.getItem('linkOpenerLinks') || '';
+
+  function parseLinks() {
+    const seen = new Set();
+    const out = [];
+    input.value.split('\n').forEach(line => {
+      let u = line.trim();
+      if (!u) return;
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      try {
+        const url = new URL(u);
+        if (url.hostname.includes('.') && !seen.has(url.href)) {
+          seen.add(url.href);
+          out.push(url.href);
+        }
+      } catch (e) { /* skip invalid lines */ }
+    });
+    return out;
+  }
+
+  function render() {
+    const links = parseLinks();
+    countEl.textContent = links.length + (links.length === 1 ? ' valid link' : ' valid links');
+    openBtn.disabled = links.length === 0;
+    list.innerHTML = '';
+    links.forEach((href, i) => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = href; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = href;
+      const rm = document.createElement('button');
+      rm.textContent = 'Remove';
+      rm.onclick = () => {
+        const lines = input.value.split('\n');
+        const idx = lines.findIndex(l => {
+          let u = l.trim();
+          if (!u) return false;
+          if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+          try { return new URL(u).href === href; } catch (e) { return false; }
+        });
+        if (idx > -1) lines.splice(idx, 1);
+        input.value = lines.join('\n');
+        save(); render();
+      };
+      li.appendChild(a); li.appendChild(rm);
+      list.appendChild(li);
+    });
+  }
+
+  function save() {
+    localStorage.setItem('linkOpenerLinks', input.value);
+  }
+
+  input.addEventListener('input', () => { save(); render(); });
+
+  openBtn.addEventListener('click', () => {
+    const links = parseLinks();
+    if (!links.length) return;
+    statusEl.textContent = 'Opening ' + links.length + ' links…';
+    links.forEach((href, i) => {
+      setTimeout(() => window.open(href, '_blank', 'noopener'), i * 400);
+    });
+    setTimeout(() => { statusEl.textContent = 'Done — ' + links.length + ' links opened.'; }, links.length * 400 + 300);
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const links = parseLinks();
+    if (!links.length) return;
+    try {
+      await navigator.clipboard.writeText(links.join('\n'));
+      statusEl.textContent = 'Copied ' + links.length + ' links.';
+    } catch (e) {
+      statusEl.textContent = 'Copy failed — select the text manually.';
+    }
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    input.value = '';
+    save(); render();
+    statusEl.textContent = '';
+  });
+
+  render();
+</script>
+</body>
+</html>

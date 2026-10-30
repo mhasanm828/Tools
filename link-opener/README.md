@@ -15,6 +15,7 @@ A simple single-page tool: paste links (one per line) and open them all in new t
 - Duplicate links removed automatically
 - Click any link in the list to open it alone, or remove it
 - Copy List and Clear buttons
+- **Add numbers to a link:** enter a base link plus From/To numbers (e.g. 1–100) and it generates `base/1`, `base/2` … `base/100` into the list (max 500 at a time)
 - No server, no tracking, no dependencies — one HTML file
 
 ## Note

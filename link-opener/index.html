@@ -25,6 +25,15 @@
   ul.links a:hover { text-decoration: underline; }
   ul.links button { flex: 0 0 auto; padding: 6px 10px; font-size: .85rem; background: #fee2e2; color: #b91c1c; border-radius: 6px; }
   .status { margin-top: 12px; font-size: .9rem; color: #15803d; min-height: 1.2em; }
+  .numgen { margin-top: 20px; background: #fff; border: 1px solid #e2e2e2; border-radius: 10px; padding: 14px; }
+  .numgen h2 { font-size: 1.05rem; margin-bottom: 4px; }
+  .numgen p { font-size: .9rem; color: #555; margin-bottom: 10px; }
+  .numgen input[type="text"], .numgen input[type="number"] { width: 100%; padding: 10px 12px; font-size: 1rem; border: 1px solid #ccc; border-radius: 8px; background: #fff; }
+  .numgen input:focus { outline: 2px solid #2563eb; border-color: #2563eb; }
+  .numrow { display: flex; gap: 10px; margin: 10px 0; }
+  .numrow label { flex: 1; font-size: .9rem; font-weight: 600; color: #444; }
+  .numrow input { margin-top: 4px; }
+  .numgen button { width: 100%; background: #16a34a; color: #fff; }
 </style>
 </head>
 <body>
@@ -40,6 +49,17 @@
     <button class="open" id="openAll">Open All Links</button>
     <button class="ghost" id="copyBtn">Copy List</button>
     <button class="ghost" id="clearBtn">Clear</button>
+  </div>
+
+  <div class="numgen">
+    <h2>🔢 Add numbers to a link</h2>
+    <p>Generate numbered links from one base link — the number is added at the end.</p>
+    <input type="text" id="baseUrl" placeholder="Base link, e.g. https://example.com/page/">
+    <div class="numrow">
+      <label>From<input type="number" id="numFrom" value="1" min="0"></label>
+      <label>To<input type="number" id="numTo" value="100" min="0"></label>
+    </div>
+    <button id="genBtn">Generate &amp; Add Links</button>
   </div>
 
   <div class="status" id="status"></div>
@@ -137,6 +157,21 @@
     input.value = '';
     save(); render();
     statusEl.textContent = '';
+  });
+
+  document.getElementById('genBtn').addEventListener('click', () => {
+    let base = document.getElementById('baseUrl').value.trim();
+    const from = parseInt(document.getElementById('numFrom').value, 10);
+    const to = parseInt(document.getElementById('numTo').value, 10);
+    if (!base) { statusEl.textContent = 'Enter a base link first.'; return; }
+    if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+    if (isNaN(from) || isNaN(to) || to < from) { statusEl.textContent = 'Check the From and To numbers.'; return; }
+    if (to - from + 1 > 500) { statusEl.textContent = 'Too many links — max 500 at a time.'; return; }
+    const gen = [];
+    for (let n = from; n <= to; n++) gen.push(base + n);
+    input.value = (input.value.trim() ? input.value.replace(/\n+$/, '') + '\n' : '') + gen.join('\n');
+    save(); render();
+    statusEl.textContent = 'Added ' + gen.length + ' numbered links.';
   });
 
   render();
